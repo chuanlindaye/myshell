@@ -1,0 +1,13 @@
+# 统一换行符：仓库和工作区一律使用 LF
+#
+# 为什么不靠 core.autocrlf：
+#   这个仓库放在 D:\ 上，Windows 和 WSL 通过 /mnt/d 访问的是同一份物理文件，
+#   工作区只能有一种换行符。让两边都"自动转换"会互相打架——一边写 CRLF、
+#   另一边看 LF，diff 永远显示有改动。所以统一成 LF，两边都不转换。
+#
+# 为什么是 LF 而不是 CRLF：
+#   本项目在 WSL(Linux) 下用 gcc 编译，后续可能加 Makefile 或 shell 脚本。
+#   这两类文件带 CRLF 会报 "bad interpreter" 之类的错误。
+#
+# text=auto 让 Git 自动识别哪些是文本文件；eol=lf 指定检出时也用 LF。
+* text=auto eol=lf

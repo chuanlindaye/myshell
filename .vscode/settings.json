@@ -1,0 +1,6 @@
+{
+  // 强制使用 LF 换行，配合 .gitattributes 保持一致。
+  // 不加这条的话，VSCode 在 Windows 上新建/保存文件会写入 CRLF，
+  // git 立刻就会把文件显示成已修改。
+  "files.eol": "\n"
+}
