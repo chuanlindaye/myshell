@@ -9,6 +9,7 @@
 int tokenize(char *line, char **argv);
 int run_builtin(char **argv);
 void execute(char ** argv);
+int my_cd(char ** argv);
 
 int main(void)
 {
@@ -52,6 +53,10 @@ int run_builtin(char **argv){
         int code = argv[1] ? atoi(argv[1]) : 0;
         exit(code);
     }
+    if(strcmp(argv[0],"cd") == 0){
+        my_cd(argv);
+        return 1;
+    }
     return 0;
 }
 
@@ -69,4 +74,18 @@ void execute(char ** argv){
 
     int status;
     waitpid(pid, &status, 0);
+}
+
+int my_cd(char **argv){
+    const char *dir = argv[1] ? argv[1] : getenv("HOME");
+
+    if(dir == NULL){
+        fprintf(stderr, "cd: HOME not set\n");
+        return -1;
+    }
+    if(chdir(dir) != 0){
+        perror("cd");
+        return -1;
+    }
+    return 0;
 }
