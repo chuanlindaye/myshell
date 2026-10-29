@@ -26,9 +26,9 @@ int main(void)
         char *argv[MAXARGS];
         int argc = tokenize(line,argv);
         if(argc == 0) continue;
-        if(run_builtin(argc)) continue;
+        if(run_builtin(argv)) continue;
 
-        execute(argc);
+        execute(argv);
     }
     
     free(line);
@@ -41,12 +41,28 @@ int tokenize(char *line, char ** argv){
     argv[num] = strtok(line," \t\n");
     while(argv[num] != NULL){
         num++;
-        argv[num] = strtok("NULL"," \t\n");
+        argv[num] = strtok(NULL," \t\n");
     }
     if(num >= MAXARGS) num = -1;
     return num;
 }
 
 int run_builtin(char **argv){
-    
+    return 0;
+}
+
+void execute(char ** argv){
+    pid_t pid = fork();
+    if(pid < 0){
+        perror("fork");
+        return;
+    }
+    if(pid == 0){//subprocess
+        execvp(argv[0],argv);
+        perror(argv[0]);//when fail to here
+        _exit(127);
+    }
+
+    int status;
+    waitpid(pid, &status, 0);
 }
