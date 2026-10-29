@@ -48,6 +48,10 @@ int tokenize(char *line, char ** argv){
 }
 
 int run_builtin(char **argv){
+    if(strcmp(argv[0],"exit") == 0){
+        int code = argv[1] ? atoi(argv[1]) : 0;
+        exit(code);
+    }
     return 0;
 }
 
