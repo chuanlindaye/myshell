@@ -26,7 +26,7 @@ int main(void)
 
         char *argv[MAXARGS];
         int argc = tokenize(line,argv);
-        if(argc == 0) continue;
+        if(argc <= 0) continue;
         if(run_builtin(argv)) continue;
 
         execute(argv);
@@ -38,13 +38,63 @@ int main(void)
 
 int tokenize(char *line, char ** argv){
     int num = 0;
-    if(line == NULL) return 0;
-    argv[num] = strtok(line," \t\n");
-    while(argv[num] != NULL){
-        num++;
-        argv[num] = strtok(NULL," \t\n");
+    char *p = line;
+
+    while(*p){
+        //skip blank between words
+        while(*p == ' ' || *p == '\t' || *p == '\n'){p++;}
+        if(*p == '\0') break;
+
+        //left a position for NULL at tail
+        if(num == MAXARGS - 1){
+            fprintf(stderr, "mysh: too many arguments\n");
+            return -1;
+        }
+
+        //prepare a word: start is the beginning, w is the writing pointer
+        char *start = p;
+        char *w = p;
+        int in_single = 0;
+        int in_double = 0;
+
+        //scan a word by character
+        while(*p){
+            if(in_single){
+                if(*p == '\''){in_single = 0;p++;}
+                else *w++ = *p++;
+            }
+            else if(in_double){
+                if(*p == '"'){in_double = 0; p++;}
+                else if(*p == '\\' && (p[1] == '"' || p[1] == '\\')){
+                    p++;
+                    *w++ = *p++;
+                }
+                else *w++ = *p++;
+            }
+            else {
+                if(*p == ' ' || *p == '\t' || *p == '\n') break;
+                if(*p == '\''){in_single = 1; p++;}
+                else if(*p == '"'){in_double = 1;p++;}
+                else if(*p == '\\' &&p[1] != '\0'){
+                    p++;
+                    *w++ = *p++;
+                } 
+                else *w++ = *p++;
+            }   
+        } 
+        //quote doesn't close
+        if(in_single || in_double){
+            fprintf(stderr, "mysh: unmatched quote\n");
+            return -1;
+        }
+
+        //skip the dividor,write the terminator
+        if(*p != '\0') p++;
+        *w = '\0';
+        argv[num++] = start;  
     }
-    if(num >= MAXARGS) num = -1;
+
+    argv[num] = NULL;
     return num;
 }
 
