@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include <sys/wait.h>
 
 #define MAXARGS 64
@@ -13,26 +15,26 @@ int my_cd(char ** argv);
 
 int main(void)
 {
-    char *line = NULL;
-    size_t cap = 0;
     while(1){
-        printf("mysh>");
-        fflush(stdout);
-        
-        if(getline(&line,&cap, stdin)== -1){
-            putchar('\n');
-            break;
-        }
+    char *line = readline("mysh> ");
+    if(line == NULL){
+        putchar('\n');
+        break;
+    }
 
-        char *argv[MAXARGS];
-        int argc = tokenize(line,argv);
-        if(argc <= 0) continue;
-        if(run_builtin(argv)) continue;
+    if(*line !='\0'){
+        add_history(line);
+    }
 
+    char *argv[MAXARGS];
+    int argc = tokenize(line,argv);
+    if(argc > 0 && !run_builtin(argv)){
         execute(argv);
     }
-    
+
     free(line);
+    }
+    
     return 0;
 }
 
