@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <sys/wait.h>
@@ -12,6 +13,7 @@ int tokenize(char *line, char **argv);
 int run_builtin(char **argv);
 void execute(char ** argv);
 int my_cd(char ** argv);
+static void remove_args(char **argv, int idx, int n);
 
 int main(void)
 {
@@ -113,17 +115,67 @@ int run_builtin(char **argv){
 }
 
 void execute(char ** argv){
+    char *infile = NULL;
+    char *outfile = NULL;
+    int append = 0;
+
+    //scan and get rid of redirection
+    for(int i = 0; argv[i] != NULL; i++){
+        if(strcmp(argv[i], ">") == 0 || strcmp(argv[i], ">>") == 0){
+            if(argv[i+1] == NULL){
+                fprintf(stderr,"mysh: expected filename after '%s'\n", argv[i]);
+                return;
+            }
+            outfile = argv[i+1];
+            append = (argv[i][1] == '>');
+            remove_args(argv, i, 2);
+            i--;
+        }
+        else if(strcmp(argv[i], "<") == 0){
+            if(argv[i+1] == NULL){
+                fprintf(stderr, "mysh: expected filename after '<'\n");
+                return;
+            }
+            infile = argv[i+1];
+            remove_args(argv, i, 2);
+            i--;
+        }
+    }
+
+    if(argv[0] == NULL){
+        fprintf(stderr, "mysh: no command\n");
+        return;
+    }
+
+    //fork
     pid_t pid = fork();
     if(pid < 0){
         perror("fork");
         return;
     }
-    if(pid == 0){//subprocess
-        execvp(argv[0],argv);
-        perror(argv[0]);//when fail to here
+
+    if(pid == 0){
+        //subprocess: first redirection,then exec
+        if(infile != NULL){
+            int fd = open(infile, O_RDONLY);
+            if(fd < 0){perror(infile); _exit(1);}
+            dup2(fd, STDIN_FILENO);
+            close(fd);
+        }
+        if(outfile != NULL){
+            int flags = O_WRONLY | O_CREAT |(append ? O_APPEND : O_TRUNC);
+            int fd = open(outfile, flags, 0644);
+            if(fd < 0){perror(outfile); _exit(1);}
+            dup2(fd, STDOUT_FILENO);
+            close(fd);
+        }
+
+        execvp(argv[0], argv);
+        perror(argv[0]);
         _exit(127);
     }
 
+    //parent process
     int status;
     waitpid(pid, &status, 0);
 }
@@ -140,4 +192,13 @@ int my_cd(char **argv){
         return -1;
     }
     return 0;
+}
+
+static void remove_args(char **argv, int idx,int n){
+    int i = idx;
+    while(argv[i + n] != NULL){
+        argv[i] = argv[i + n];
+        i++;
+    }
+    argv[i] = NULL;
 }
