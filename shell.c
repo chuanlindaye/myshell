@@ -40,6 +40,14 @@ int main(void)
     return 0;
 }
 
+static char OP_LT[] = "<";
+static char OP_GT[] = ">";
+static char OP_GG[] = ">>";
+
+static int is_redir(char c){
+    return c == '<' || c == '>';
+}
+
 int tokenize(char *line, char ** argv){
     int num = 0;
     char *p = line;
@@ -50,12 +58,22 @@ int tokenize(char *line, char ** argv){
         if(*p == '\0') break;
 
         //left a position for NULL at tail
-        if(num == MAXARGS - 1){
+        if(num > MAXARGS - 3){
             fprintf(stderr, "mysh: too many arguments\n");
             return -1;
         }
-
-        //prepare a word: start is the beginning, w is the writing pointer
+        //there is a operand at current position
+        if(is_redir(*p)){
+            if(*p == '>' && p[1] == '>'){//judge for >>
+                argv[num++] = OP_GG;
+                p += 2;
+            }else{
+                argv[num++] = (*p == '>') ? OP_GT : OP_LT;
+                p++;
+            }
+            continue;
+        }
+        //prepare a common word: start is the beginning, w is the writing pointer
         char *start = p;
         char *w = p;
         int in_single = 0;
@@ -77,6 +95,7 @@ int tokenize(char *line, char ** argv){
             }
             else {
                 if(*p == ' ' || *p == '\t' || *p == '\n') break;
+                if(is_redir(*p)) break;
                 if(*p == '\''){in_single = 1; p++;}
                 else if(*p == '"'){in_double = 1;p++;}
                 else if(*p == '\\' &&p[1] != '\0'){
@@ -93,9 +112,18 @@ int tokenize(char *line, char ** argv){
         }
 
         //skip the dividor,write the terminator
-        if(*p != '\0') p++;
+        char * op = NULL;
+        if(is_redir(*p)){
+            op = (*p == '>' && p[1] == '>') ? OP_GG : (*p == '>' ? OP_GT : OP_LT);
+            p += (*p == '>' && p[1] == '>' ) ? 2 : 1;
+        }
+        else if(*p != '\0'){ p++;}
         *w = '\0';
         argv[num++] = start;  
+
+        if(op != NULL){
+            argv[num++] = op;
+        }
     }
 
     argv[num] = NULL;
